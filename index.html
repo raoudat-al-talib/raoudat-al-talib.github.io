@@ -391,28 +391,71 @@ function createBookCard(book) {
   return card;
 }
 
-/* ============ جلب صورة الغلاف تلقائياً (Google Books API) ============ */
+/* ============ جلب صورة الغلاف تلقائياً (بمعدل محدود لتفادي حظر الطلبات) ============ */
 const coverCache = new Map();
+const coverQueue = [];
+let coverQueueRunning = false;
+
 function fetchCover(title, slotEl) {
   if (coverCache.has(title)) {
     const url = coverCache.get(title);
     if (url) applyCover(slotEl, url);
     return;
   }
-  const query = encodeURIComponent(`intitle:${title}`);
-  fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`)
-    .then(res => res.ok ? res.json() : null)
-    .then(data => {
-      const img = data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail || null;
-      coverCache.set(title, img);
-      if (img && slotEl) applyCover(slotEl, img);
-    })
-    .catch(() => { coverCache.set(title, null); });
+  coverQueue.push({ title, slotEl });
+  runCoverQueue();
 }
+
+function runCoverQueue() {
+  if (coverQueueRunning) return;
+  coverQueueRunning = true;
+  processNextCover();
+}
+
+function processNextCover() {
+  const next = coverQueue.shift();
+  if (!next) { coverQueueRunning = false; return; }
+  resolveCover(next.title)
+    .then(url => {
+      coverCache.set(next.title, url);
+      if (url && next.slotEl) applyCover(next.slotEl, url);
+    })
+    .catch(() => { coverCache.set(next.title, null); })
+    .finally(() => {
+      setTimeout(processNextCover, 400); // تأخير بسيط بين الطلبات لتفادي الحظر
+    });
+}
+
+async function resolveCover(title) {
+  // المحاولة الأولى: Google Books
+  try {
+    const q = encodeURIComponent(`intitle:${title}`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+    if (res.ok) {
+      const data = await res.json();
+      const img = data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
+      if (img) return img.replace('http://', 'https://');
+    }
+  } catch (e) { /* تجاهل والانتقال للمصدر التالي */ }
+
+  // المحاولة الثانية: Open Library كمصدر احتياطي
+  try {
+    const q2 = encodeURIComponent(title);
+    const res2 = await fetch(`https://openlibrary.org/search.json?title=${q2}&limit=1`);
+    if (res2.ok) {
+      const data2 = await res2.json();
+      const coverId = data2?.docs?.[0]?.cover_i;
+      if (coverId) return `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`;
+    }
+  } catch (e) { /* تجاهل */ }
+
+  return null;
+}
+
 function applyCover(slotEl, url) {
   if (!slotEl || !slotEl.isConnected) return;
   const img = document.createElement('img');
-  img.src = url.replace('http://', 'https://');
+  img.src = url;
   img.alt = "";
   img.loading = "lazy";
   img.className = "cover-img absolute inset-0 w-full h-full object-cover";
