@@ -40,7 +40,7 @@ function escapeHtml(str) {
     .replace(/</g, '<')
     .replace(/>/g, '>')
     .replace(/"/g, '"')
-    .replace(/'/g, ''');
+    .replace(/'/g, '&#039;');
 }
 
 function buildPageHtml(book) {
