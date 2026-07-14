@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مكتبة روضة الطالب</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Tajawal', sans-serif; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+  #sidebar-overlay { transition: opacity 0.3s ease; }
+  #sidebar { transition: transform 0.3s ease; }
+
+  .book-card { animation: fadeIn 0.35s ease both; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .spinner {
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #0d9488;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .active-cat {
+    background-color: #0d9488 !important;
+    color: white !important;
+  }
+
+  .cat-mode-btn { color: #64748b; background: #f8fafc; }
+  .cat-mode-btn.active-mode { color: #0d9488; background: white; box-shadow: inset 0 -2px 0 #0d9488; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+<!-- قالب مخفي للأيقونة الافتراضية (يُستخدم تلقائياً عند عدم وجود صورة غلاف) -->
+<div id="defaultCoverIcon" class="hidden">
+  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+  </svg>
+</div>
+
+<!-- ===== Header ===== -->
+<header class="bg-gradient-to-l from-teal-700 to-teal-600 sticky top-0 z-30 shadow-lg">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+    <!-- Sidebar toggle (mobile) -->
+    <button id="openSidebarBtn" class="lg:hidden text-white p-2 rounded-lg hover:bg-white/10 transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <div class="bg-white/15 rounded-xl p-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+        </svg>
+      </div>
+      <div class="text-white">
+        <h1 class="font-extrabold text-lg leading-tight">مكتبة روضة الطالب</h1>
+        <p class="text-teal-100 text-[11px] leading-tight">أكثر من 1600 عنوان بين يديك</p>
+      </div>
+    </div>
+
+    <!-- Search bar -->
+    <div class="flex-1 relative">
+      <input id="searchInput" type="text" placeholder="ابحث عن كتاب أو مؤلف..."
+        class="w-full rounded-full py-2.5 px-5 pr-11 text-sm bg-white/95 focus:bg-white outline-none focus:ring-2 focus:ring-teal-300 shadow-inner placeholder:text-slate-400" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+      </svg>
+    </div>
+  </div>
+</header>
+
+<div class="max-w-7xl mx-auto flex relative">
+
+  <!-- ===== Sidebar overlay (mobile) ===== -->
+  <div id="sidebar-overlay" class="fixed inset-0 bg-black/40 z-40 hidden lg:hidden"></div>
+
+  <!-- ===== Sidebar ===== -->
+  <aside id="sidebar"
+    class="fixed lg:sticky top-0 lg:top-[72px] right-0 h-screen lg:h-[calc(100vh-72px)] w-72 bg-white z-50 lg:z-10
+           translate-x-full lg:translate-x-0 shadow-2xl lg:shadow-none border-l lg:border lg:rounded-2xl
+           flex flex-col overflow-hidden shrink-0 lg:my-4">
+
+    <div class="flex items-center justify-between p-4 border-b bg-teal-50">
+      <h2 class="font-bold text-teal-800 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 4.5h14.25M3 9h9.75M3 13.5h9.75m4.5-4.5v12m0 0l-3.75-3.75M17.25 21L21 17.25" />
+        </svg>
+        التصنيفات
+      </h2>
+      <button id="closeSidebarBtn" class="lg:hidden text-slate-500 hover:text-red-500 p-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- تبويبات نوع التصنيف -->
+    <div class="flex border-b bg-slate-50 text-xs font-bold">
+      <button data-mode="topic" class="cat-mode-btn active-mode flex-1 py-2.5 text-center transition">حسب النوع</button>
+      <button data-mode="author" class="cat-mode-btn flex-1 py-2.5 text-center transition border-r border-l">حسب المؤلف</button>
+      <button data-mode="publisher" class="cat-mode-btn flex-1 py-2.5 text-center transition">دار النشر</button>
+    </div>
+
+    <div class="p-3 border-b">
+      <input id="categorySearch" type="text" placeholder="ابحث في التصنيفات..."
+        class="w-full rounded-lg py-2 px-3 text-sm bg-slate-100 outline-none focus:ring-2 focus:ring-teal-300" />
+    </div>
+
+    <div id="categoryList" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+  </aside>
+
+  <!-- ===== Main content ===== -->
+  <main class="flex-1 min-w-0 p-4">
+
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <div>
+        <p class="text-sm text-slate-500">النتائج</p>
+        <p id="resultsCount" class="font-bold text-teal-700 text-lg"></p>
+      </div>
+      <div id="activeCategoryChip" class="hidden items-center gap-2 bg-teal-100 text-teal-800 text-sm font-medium px-3 py-1.5 rounded-full">
+        <span id="activeCategoryLabel"></span>
+        <button id="clearCategoryBtn" class="hover:text-red-600 font-bold">✕</button>
+      </div>
+    </div>
+
+    <div id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4"></div>
+
+    <div id="loadMoreWrap" class="flex justify-center py-8">
+      <div id="loadingSpinner" class="spinner hidden"></div>
+      <button id="loadMoreBtn" class="hidden bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 py-2.5 rounded-full shadow transition">
+        عرض المزيد من الكتب
+      </button>
+    </div>
+
+    <div id="noResults" class="hidden text-center py-20 text-slate-400">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+      </svg>
+      <p class="font-bold text-lg">لا توجد نتائج مطابقة</p>
+      <p class="text-sm">جرّب كلمة بحث مختلفة أو اختر تصنيفاً آخر</p>
+    </div>
+  </main>
+</div>
+
+<footer class="bg-slate-800 text-slate-300 text-center py-5 mt-6 text-sm">
+  <p>© 2026 مكتبة روضة الطالب — جميع الحقوق محفوظة</p>
+</footer>
+
+<!-- زر واتساب عائم -->
+<!-- نافذة تفاصيل الكتاب -->
+<div id="bookDetailModal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center">
+  <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md max-h-[88vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white border-b border-slate-100 px-5 py-3.5 flex items-center justify-between">
+      <h2 class="font-extrabold text-slate-800">تفاصيل الكتاب</h2>
+      <button onclick="closeBookDetail()" class="text-slate-400 hover:text-red-500 p-1">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div class="p-5">
+      <div class="flex gap-4 mb-4">
+        <div id="detailCoverWrap" class="w-24 h-32 rounded-lg bg-gradient-to-br from-teal-50 to-teal-100 border border-teal-100 overflow-hidden shrink-0 relative"></div>
+        <div class="min-w-0">
+          <h3 id="detailTitle" class="font-bold text-slate-800 leading-snug mb-1"></h3>
+          <p id="detailAuthor" class="text-sm text-slate-500"></p>
+          <p id="detailPublisher" class="text-xs text-teal-600 mt-0.5"></p>
+          <p id="detailPrice" class="font-extrabold text-teal-700 mt-2"></p>
+        </div>
+      </div>
+      <div id="detailDescriptionWrap" class="hidden mb-4">
+        <h4 class="text-sm font-bold text-slate-700 mb-1">نبذة عن الكتاب</h4>
+        <p id="detailDescription" class="text-sm text-slate-600 leading-relaxed"></p>
+      </div>
+      <div id="detailAuthorBioWrap" class="hidden mb-4">
+        <h4 class="text-sm font-bold text-slate-700 mb-1">نبذة عن المؤلف</h4>
+        <p id="detailAuthorBio" class="text-sm text-slate-600 leading-relaxed"></p>
+      </div>
+      <a id="detailWhatsappLink" href="#" target="_blank" rel="noopener"
+         class="flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold py-2.5 rounded-lg transition w-full">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="h-4 w-4 fill-white">
+          <path d="M16.004 3C9.373 3 4 8.373 4 15c0 2.386.7 4.61 1.92 6.48L4 29l7.72-1.87A11.94 11.94 0 0016.004 27C22.635 27 28 21.627 28 15S22.635 3 16.004 3zm0 21.75c-1.98 0-3.83-.55-5.41-1.5l-.39-.23-4.58 1.11 1.13-4.46-.25-.4A9.72 9.72 0 016.25 15c0-5.38 4.38-9.75 9.75-9.75S25.75 9.62 25.75 15 21.38 24.75 16.004 24.75zm5.4-7.3c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.34.22-.63.07-.3-.15-1.24-.46-2.36-1.46-.87-.78-1.46-1.73-1.63-2.03-.17-.3-.02-.46.13-.6.13-.13.3-.34.45-.5.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.56c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.47 0 1.46 1.07 2.87 1.22 3.07.15.2 2.1 3.2 5.09 4.49.71.3 1.27.49 1.7.62.71.23 1.36.2 1.87.12.57-.08 1.75-.71 2-1.4.25-.68.25-1.27.17-1.4-.08-.13-.27-.2-.57-.35z"/>
+        </svg>
+        طلب عبر واتساب
+      </a>
+    </div>
+  </div>
+</div>
+
+<a id="floatingWhatsapp" href="https://wa.me/213770664417" target="_blank" rel="noopener"
+   class="fixed bottom-5 left-5 z-40 bg-green-500 hover:bg-green-600 text-white rounded-full p-4 shadow-xl transition flex items-center justify-center">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="h-7 w-7 fill-white">
+    <path d="M16.004 3C9.373 3 4 8.373 4 15c0 2.386.7 4.61 1.92 6.48L4 29l7.72-1.87A11.94 11.94 0 0016.004 27C22.635 27 28 21.627 28 15S22.635 3 16.004 3zm0 21.75c-1.98 0-3.83-.55-5.41-1.5l-.39-.23-4.58 1.11 1.13-4.46-.25-.4A9.72 9.72 0 016.25 15c0-5.38 4.38-9.75 9.75-9.75S25.75 9.62 25.75 15 21.38 24.75 16.004 24.75zm5.4-7.3c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.34.22-.63.07-.3-.15-1.24-.46-2.36-1.46-.87-.78-1.46-1.73-1.63-2.03-.17-.3-.02-.46.13-.6.13-.13.3-.34.45-.5.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.56c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.47 0 1.46 1.07 2.87 1.22 3.07.15.2 2.1 3.2 5.09 4.49.71.3 1.27.49 1.7.62.71.23 1.36.2 1.87.12.57-.08 1.75-.71 2-1.4.25-.68.25-1.27.17-1.4-.08-.13-.27-.2-.57-.35z"/>
+  </svg>
+</a>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ============ إعدادات Firebase (مفتاح عام آمن) ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyD8ymp9TFSI1cy9j0v3UXEc6bSLcOlhqPk",
+  authDomain: "raoudat-al-talib.firebaseapp.com",
+  projectId: "raoudat-al-talib",
+  storageBucket: "raoudat-al-talib.firebasestorage.app",
+  messagingSenderId: "704849358324",
+  appId: "1:704849358324:web:b0a14c905b865726c8dda1",
+  measurementId: "G-GQSLJHVHRW"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
+/* ============ بيانات الكتب (تُجلب حياً من قاعدة البيانات) ============ */
+let BOOKS = [];
+
+/* ============ إعدادات عامة ============ */
+const WHATSAPP_NUMBER = "213770664417"; // رقم واتساب المكتبة
+const PAGE_SIZE = 30; // عدد الكتب المعروضة في كل دفعة (لتحسين الأداء)
+
+let filteredBooks = [];
+let renderedCount = 0;
+let activeCategory = null;
+let categoryMode = "topic"; // topic | author | publisher
+let searchQuery = "";
+
+/* ============ تصنيف الكتب حسب الموضوع (تلقائياً من العنوان) ============ */
+const TOPIC_RULES = [
+  { name: "التفسير وعلوم القرآن", keywords: ["تفسير", "القرآن", "آيات", "التجويد", "القراءات", "أسباب النزول", "الوقف والابتداء"] },
+  { name: "العقيدة والتوحيد", keywords: ["عقيدة", "العقيدة", "التوحيد", "الإيمان", "الأسماء والصفات", "الإبانة", "الواسطية", "الطحاوية", "الفرق", "البدع", "الولاء والبراء"] },
+  { name: "الحديث وشروحه", keywords: ["حديث", "الحديث", "بلوغ المرام", "صحيح", "سنن", "مسند", "الأربعين", "رياض الصالحين", "اللؤلؤ", "الجامع الصحيح", "مصطلح الحديث"] },
+  { name: "الفقه وأصوله", keywords: ["فقه", "الفقه", "فتاوى", "الفتاوى", "الطهارة", "الصلاة", "الزكاة", "الصيام", "الحج", "المعاملات", "النكاح", "الطلاق", "البيوع", "أصول الفقه", "القواعد الفقهية"] },
+  { name: "السيرة النبوية والصحابة", keywords: ["السيرة", "سيرة", "الرسول", "النبي", "الصحابة", "غزوة", "غزوات", "الخلفاء الراشدين"] },
+  { name: "التاريخ والتراجم", keywords: ["تاريخ", "التاريخ", "الدولة", "الخلافة", "تراجم", "طبقات", "وفيات"] },
+  { name: "الرقائق والتزكية والأخلاق", keywords: ["التزكية", "الأخلاق", "الآداب", "السلوك", "الرقائق", "القلوب", "الزهد", "الورع"] },
+  { name: "الأذكار والأدعية", keywords: ["الأذكار", "الأدعية", "الحصن الحصين", "الدعاء", "حصن المسلم"] },
+  { name: "التربية والتعليم", keywords: ["التربية", "تربية الأبناء", "المنهج", "التعليم", "الطالب", "المعلم"] },
+  { name: "اللغة العربية والنحو", keywords: ["النحو", "الصرف", "البلاغة", "اللغة العربية", "الإعراب", "الأدب", "العروض", "الشعر"] },
+  { name: "الفرق والرد على المخالفين", keywords: ["الرد على", "مناظرة", "شبهات", "المذاهب الفكرية"] },
+  { name: "متون وحفظ", keywords: ["متن", "منظومة", "الحفظ الميسر", "المتون"] },
+  { name: "قصص وأطفال", keywords: ["قصص الأطفال", "للأطفال", "قصص", "حكايات"] },
+  { name: "التنمية الذاتية وعام", keywords: ["حياتي", "النجاح", "التنمية", "الإدارة", "المهارات"] },
+];
+
+function classifyTopic(title) {
+  for (const rule of TOPIC_RULES) {
+    for (const kw of rule.keywords) {
+      if (title.includes(kw)) return rule.name;
+    }
+  }
+  return "كتب عامة ومتنوعة";
+}
+
+/* ============ عناصر DOM ============ */
+const grid = document.getElementById('grid');
+const searchInput = document.getElementById('searchInput');
+const categoryList = document.getElementById('categoryList');
+const categorySearch = document.getElementById('categorySearch');
+const resultsCount = document.getElementById('resultsCount');
+const loadMoreBtn = document.getElementById('loadMoreBtn');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const noResults = document.getElementById('noResults');
+const activeCategoryChip = document.getElementById('activeCategoryChip');
+const activeCategoryLabel = document.getElementById('activeCategoryLabel');
+const clearCategoryBtn = document.getElementById('clearCategoryBtn');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const openSidebarBtn = document.getElementById('openSidebarBtn');
+const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+
+/* ============ بناء قوائم التصنيفات الثلاث (نوع / مؤلف / دار نشر) ============ */
+function buildCategories(field) {
+  const counts = {};
+  BOOKS.forEach(b => {
+    counts[b[field]] = (counts[b[field]] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+let CATEGORY_SETS = { topic: [], author: [], publisher: [] };
+const CATEGORY_FIELD = { topic: 'topic', author: 'author', publisher: 'publisher' };
+
+function renderCategories(filterText = "") {
+  categoryList.innerHTML = "";
+
+  // زر "كل الكتب"
+  const allBtn = document.createElement('button');
+  allBtn.className = `w-full text-right px-3 py-2 rounded-lg text-sm font-bold flex justify-between items-center transition
+    ${!activeCategory ? 'active-cat' : 'hover:bg-slate-100 text-slate-700'}`;
+  allBtn.innerHTML = `<span>📚 كل الكتب</span><span class="text-xs opacity-75">${BOOKS.length}</span>`;
+  allBtn.onclick = () => selectCategory(null);
+  categoryList.appendChild(allBtn);
+
+  const divider = document.createElement('div');
+  divider.className = "border-t my-2";
+  categoryList.appendChild(divider);
+
+  const currentSet = CATEGORY_SETS[categoryMode];
+  const q = filterText.trim().toLowerCase();
+  const filtered = q ? currentSet.filter(([name]) => name.toLowerCase().includes(q)) : currentSet;
+
+  if (filtered.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = "text-center text-slate-400 text-sm py-4";
+    empty.textContent = "لا يوجد تصنيف مطابق";
+    categoryList.appendChild(empty);
+    return;
+  }
+
+  filtered.forEach(([name, count]) => {
+    const btn = document.createElement('button');
+    btn.className = `w-full text-right px-3 py-2 rounded-lg text-sm flex justify-between items-center transition
+      ${activeCategory === name ? 'active-cat' : 'hover:bg-slate-100 text-slate-600'}`;
+    btn.innerHTML = `<span class="line-clamp-2">${escapeHtml(name)}</span><span class="text-xs opacity-75 shrink-0 mr-2">${count}</span>`;
+    btn.onclick = () => selectCategory(name);
+    categoryList.appendChild(btn);
+  });
+}
+
+function selectCategory(name) {
+  activeCategory = name;
+  renderCategories(categorySearch.value);
+  applyFilters();
+  closeSidebar();
+}
+
+function switchCategoryMode(mode) {
+  categoryMode = mode;
+  activeCategory = null;
+  document.querySelectorAll('.cat-mode-btn').forEach(btn => {
+    btn.classList.toggle('active-mode', btn.dataset.mode === mode);
+  });
+  categorySearch.value = "";
+  renderCategories();
+  applyFilters();
+}
+document.querySelectorAll('.cat-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchCategoryMode(btn.dataset.mode));
+});
+
+/* ============ فلترة البحث ============ */
+function applyFilters() {
+  const q = searchQuery.trim().toLowerCase();
+
+  const field = CATEGORY_FIELD[categoryMode];
+  filteredBooks = BOOKS.filter(b => {
+    const matchesCategory = !activeCategory || b[field] === activeCategory;
+    if (!matchesCategory) return false;
+    if (!q) return true;
+    return b.title.toLowerCase().includes(q) || b.author.toLowerCase().includes(q);
+  });
+
+  // تحديث شريحة التصنيف النشط
+  if (activeCategory) {
+    activeCategoryChip.classList.remove('hidden');
+    activeCategoryChip.classList.add('flex');
+    activeCategoryLabel.textContent = activeCategory;
+  } else {
+    activeCategoryChip.classList.add('hidden');
+    activeCategoryChip.classList.remove('flex');
+  }
+
+  renderedCount = 0;
+  grid.innerHTML = "";
+  renderNextBatch();
+}
+
+/* ============ عرض الكتب على دفعات (لتفادي إبطاء المتصفح) ============ */
+function renderNextBatch() {
+  const total = filteredBooks.length;
+  resultsCount.textContent = `${total.toLocaleString('ar')} كتاب`;
+
+  if (total === 0) {
+    noResults.classList.remove('hidden');
+    loadMoreBtn.classList.add('hidden');
+    return;
+  }
+  noResults.classList.add('hidden');
+
+  const nextSlice = filteredBooks.slice(renderedCount, renderedCount + PAGE_SIZE);
+  const fragment = document.createDocumentFragment();
+
+  nextSlice.forEach(book => {
+    fragment.appendChild(createBookCard(book));
+  });
+
+  grid.appendChild(fragment);
+  renderedCount += nextSlice.length;
+
+  loadMoreBtn.classList.toggle('hidden', renderedCount >= total);
+}
+
+/* ============ إنشاء بطاقة كتاب ============ */
+function createBookCard(book) {
+  const card = document.createElement('div');
+  card.className = "book-card bg-white rounded-2xl shadow-sm hover:shadow-lg border border-slate-100 flex flex-col p-3.5 transition";
+
+  const priceFormatted = book.price.toLocaleString('ar');
+  const waMessage = encodeURIComponent(`أريد طلب كتاب: ${book.title} بسعر ${book.price} دج`);
+  const waLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMessage}`;
+
+  const coverSrc = book.coverBase64 ? book.coverBase64 : `${book.id}.jpg`;
+
+  card.innerHTML = `
+    <div class="flex-1 cursor-pointer" onclick="openBookDetail(${book.id})">
+      <div class="w-full aspect-[3/4] bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl flex items-center justify-center mb-3 border border-teal-100 overflow-hidden relative">
+        <img src="${coverSrc}" alt="${escapeHtml(book.title)}" loading="lazy"
+             class="absolute inset-0 w-full h-full object-cover"
+             onerror="this.parentElement.innerHTML = document.getElementById('defaultCoverIcon').innerHTML;" />
+      </div>
+      <h3 class="font-bold text-sm text-slate-800 line-clamp-2 leading-snug" title="${escapeHtml(book.title)}">${escapeHtml(book.title)}</h3>
+      <p class="text-xs text-slate-500 mt-1 line-clamp-1">${escapeHtml(book.author)}</p>
+      <p class="text-[11px] text-teal-600 mt-0.5 line-clamp-1">${escapeHtml(book.publisher)}</p>
+    </div>
+    <div class="mt-3 pt-3 border-t border-slate-100">
+      <p class="font-extrabold text-teal-700 mb-2">${priceFormatted} <span class="text-xs font-medium text-slate-500">دج</span></p>
+      <a href="${waLink}" target="_blank" rel="noopener"
+         class="flex items-center justify-center gap-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-bold py-2 rounded-lg transition w-full">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="h-4 w-4 fill-white">
+          <path d="M16.004 3C9.373 3 4 8.373 4 15c0 2.386.7 4.61 1.92 6.48L4 29l7.72-1.87A11.94 11.94 0 0016.004 27C22.635 27 28 21.627 28 15S22.635 3 16.004 3zm0 21.75c-1.98 0-3.83-.55-5.41-1.5l-.39-.23-4.58 1.11 1.13-4.46-.25-.4A9.72 9.72 0 016.25 15c0-5.38 4.38-9.75 9.75-9.75S25.75 9.62 25.75 15 21.38 24.75 16.004 24.75zm5.4-7.3c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.66.15-.2.3-.76.96-.93 1.16-.17.2-.34.22-.63.07-.3-.15-1.24-.46-2.36-1.46-.87-.78-1.46-1.73-1.63-2.03-.17-.3-.02-.46.13-.6.13-.13.3-.34.45-.5.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.66-1.6-.9-2.2-.24-.58-.48-.5-.66-.5h-.56c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.47 0 1.46 1.07 2.87 1.22 3.07.15.2 2.1 3.2 5.09 4.49.71.3 1.27.49 1.7.62.71.23 1.36.2 1.87.12.57-.08 1.75-.71 2-1.4.25-.68.25-1.27.17-1.4-.08-.13-.27-.2-.57-.35z"/>
+        </svg>
+        طلب عبر واتساب
+      </a>
+    </div>
+  `;
+  return card;
+}
+
+/* ============ حماية بسيطة من HTML injection ============ */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? "";
+  return div.innerHTML;
+}
+
+/* ============ البحث الفوري مع تأخير بسيط (debounce) ============ */
+let debounceTimer;
+searchInput.addEventListener('input', (e) => {
+  clearTimeout(debounceTimer);
+  const value = e.target.value;
+  debounceTimer = setTimeout(() => {
+    searchQuery = value;
+    applyFilters();
+  }, 200);
+});
+
+/* ============ بحث داخل التصنيفات ============ */
+categorySearch.addEventListener('input', (e) => {
+  renderCategories(e.target.value);
+});
+
+/* ============ زر تحميل المزيد ============ */
+loadMoreBtn.addEventListener('click', () => {
+  loadingSpinner.classList.remove('hidden');
+  loadMoreBtn.classList.add('hidden');
+  setTimeout(() => {
+    renderNextBatch();
+    loadingSpinner.classList.add('hidden');
+  }, 150);
+});
+
+/* ============ إزالة التصنيف النشط ============ */
+clearCategoryBtn.addEventListener('click', () => selectCategory(null));
+
+/* ============ فتح/إغلاق القائمة الجانبية (موبايل) ============ */
+function openSidebar() {
+  sidebar.classList.remove('translate-x-full');
+  sidebarOverlay.classList.remove('hidden');
+}
+function closeSidebar() {
+  if (window.innerWidth < 1024) {
+    sidebar.classList.add('translate-x-full');
+    sidebarOverlay.classList.add('hidden');
+  }
+}
+openSidebarBtn.addEventListener('click', openSidebar);
+closeSidebarBtn.addEventListener('click', closeSidebar);
+sidebarOverlay.addEventListener('click', closeSidebar);
+
+/* ============ نافذة تفاصيل الكتاب ============ */
+function openBookDetail(bookId) {
+  const book = BOOKS.find(b => b.id === bookId);
+  if (!book) return;
+
+  const coverSrc = book.coverBase64 ? book.coverBase64 : `${book.id}.jpg`;
+  document.getElementById('detailCoverWrap').innerHTML = `
+    <img src="${coverSrc}" alt="" class="absolute inset-0 w-full h-full object-cover"
+         onerror="this.parentElement.innerHTML = document.getElementById('defaultCoverIcon').innerHTML;" />`;
+
+  document.getElementById('detailTitle').textContent = book.title || '';
+  document.getElementById('detailAuthor').textContent = book.author || '';
+  document.getElementById('detailPublisher').textContent = book.publisher || '';
+  document.getElementById('detailPrice').textContent = `${(book.price || 0).toLocaleString('ar')} دج`;
+
+  const descWrap = document.getElementById('detailDescriptionWrap');
+  if (book.description && book.description.trim()) {
+    document.getElementById('detailDescription').textContent = book.description;
+    descWrap.classList.remove('hidden');
+  } else {
+    descWrap.classList.add('hidden');
+  }
+
+  const bioWrap = document.getElementById('detailAuthorBioWrap');
+  if (book.authorBio && book.authorBio.trim()) {
+    document.getElementById('detailAuthorBio').textContent = book.authorBio;
+    bioWrap.classList.remove('hidden');
+  } else {
+    bioWrap.classList.add('hidden');
+  }
+
+  const waMessage = encodeURIComponent(`أريد طلب كتاب: ${book.title} بسعر ${book.price} دج`);
+  document.getElementById('detailWhatsappLink').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMessage}`;
+
+  document.getElementById('bookDetailModal').classList.remove('hidden');
+}
+
+function closeBookDetail() {
+  document.getElementById('bookDetailModal').classList.add('hidden');
+}
+
+window.openBookDetail = openBookDetail;
+window.closeBookDetail = closeBookDetail;
+
+/* ============ التشغيل الأولي: جلب الكتب من قاعدة البيانات ============ */
+async function init() {
+  grid.innerHTML = `
+    <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
+      <div class="spinner mb-3"></div>
+      <p class="text-sm">جاري تحميل الكتب...</p>
+    </div>`;
+
+  try {
+    const snapshot = await getDocs(collection(db, 'books'));
+    const loaded = [];
+    snapshot.forEach(docSnap => loaded.push({ docId: docSnap.id, ...docSnap.data() }));
+    loaded.sort((a, b) => (a.id || 0) - (b.id || 0));
+    loaded.forEach(b => { b.topic = classifyTopic(b.title || ""); });
+    BOOKS = loaded;
+
+    CATEGORY_SETS = {
+      topic: buildCategories('topic'),
+      author: buildCategories('author'),
+      publisher: buildCategories('publisher'),
+    };
+
+    renderCategories();
+    applyFilters();
+  } catch (err) {
+    grid.innerHTML = `
+      <div class="col-span-full flex flex-col items-center justify-center py-20 text-red-400 text-center px-4">
+        <p class="font-bold mb-1">تعذّر تحميل الكتب</p>
+        <p class="text-sm text-slate-400">تأكد من اتصالك بالإنترنت ثم أعد تحميل الصفحة</p>
+      </div>`;
+    console.error(err);
+  }
+}
+init();
+</script>
+</body>
+</html>
